@@ -451,6 +451,22 @@
                 const cleanQuery = rawPlate.replace(/\s+/g, '').toLowerCase();
 
                 const offlineMatch = rawPlate.replace(/\s+/g, '').toUpperCase();
+
+                // --- CEK DARI FIREBASE DULU ---
+                try {
+                const docSnap = await db.collection('pencarian').doc(cleanQuery.toUpperCase()).get();
+                if (docSnap.exists) {
+                setSearchResult(docSnap.data());
+                setCurrentPage('result');
+                setLoading(false);
+                showMsg("✅ DARI CADANGAN FIREBASE");
+                return;
+               }
+               } catch (e) {
+               console.log("⚠️ Tidak bisa baca Firebase:", e);
+               }
+
+                
                 if (OFFLINE_SAMSAT_DATABASE[offlineMatch]) {
                     setSearchResult(OFFLINE_SAMSAT_DATABASE[offlineMatch]);
                     setCurrentPage('result');
@@ -532,10 +548,23 @@
                                 const vehicleData = unifyAndExtractVehicleData(text);
                                 
                                 if (vehicleData && !resolved) {
-                                    cleanLoadingAndTransition(vehicleData);
+                                // --- SIMPAN KE FIREBASE OTOMATIS ---
+                                try {
+                                await db.collection('pencarian').doc(cleanQuery.toUpperCase()).set({
+                                ...vehicleData,
+                                waktu_ditemukan: new Date(),
+                                sumber: 'aplikasi_csipro'
+                                }, { merge: true });
+                               console.log('✅ Tersimpan ke Firebase');
+                                } catch (e) {
+                               console.log('⚠️ Gagal simpan ke Firebase:', e);
+                                }
+                               cleanLoadingAndTransition(vehicleData);
                                 } else {
                                     handleFailure();
                                 }
+                                   
+                               
                             })
                             .catch((err) => {
                                 clearTimeout(id);
